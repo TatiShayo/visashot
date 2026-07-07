@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+/*
+ * VisaShot design tokens — "Swiss precision".
+ * Pure functional white canvas, ink navy, ONE blue accent used sparingly,
+ * semantic green/amber/red reserved for the compliance checklist.
+ * Zero gradients. Depth = 1px low-contrast borders + layered soft shadows.
+ */
+@theme {
+  --color-ink: #1b2a4a;
+  --color-ink-soft: #44506b;
+  --color-ink-faint: #8b93a7;
+  --color-accent: #2563eb;
+  --color-accent-hover: #1d4fd7;
+  --color-canvas: #ffffff;
+  --color-paper: #f7f8fa;
+  --color-rule: #e3e6ec;
+  --color-rule-strong: #c9cedb;
+
+  --color-pass: #16a34a;
+  --color-warn: #d97706;
+  --color-fail: #dc2626;
+  --color-pass-bg: #f0fdf4;
+  --color-warn-bg: #fffbeb;
+  --color-fail-bg: #fef2f2;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  --shadow-card: 0 1px 2px rgb(27 42 74 / 0.05), 0 2px 8px rgb(27 42 74 / 0.06);
+  --shadow-lift: 0 2px 4px rgb(27 42 74 / 0.06), 0 8px 24px rgb(27 42 74 / 0.1);
+
+  --radius-card: 0.5rem;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-feature-settings: "cv11";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* All numbers that measure something read as measured and official. */
+.tnum,
+code,
+pre {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Display type: tight, large. */
+.display {
+  letter-spacing: -0.02em;
+  font-weight: 650;
+  line-height: 1.05;
+}
+
+/* Styled focus rings — visible, on-brand, never default blue outline. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: rgb(37 99 235 / 0.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
