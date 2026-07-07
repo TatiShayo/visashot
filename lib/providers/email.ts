@@ -28,7 +28,6 @@ class MockEmailProvider implements EmailProvider {
   readonly mocked = true;
   async send(input: EmailInput): Promise<{ id: string; mocked: boolean }> {
     mockOutbox.push(input);
-    // eslint-disable-next-line no-console
     console.info(`[email:mock] → ${input.to} — ${input.subject}`);
     return { id: `mock_${Date.now()}`, mocked: true };
   }

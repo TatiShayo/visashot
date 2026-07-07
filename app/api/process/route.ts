@@ -13,6 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import sharp from "sharp";
 import { z } from "zod";
 import { getSpec } from "@/data/photo-specs";
 import { ingestUpload, IngestError, MAX_UPLOAD_BYTES } from "@/lib/image-ingest";
@@ -24,6 +25,42 @@ import { getStorage } from "@/lib/providers/storage";
 import { getOrderStore } from "@/lib/orders";
 import { BASE_PRICE_CENTS } from "@/lib/pricing";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+
+/**
+ * Mean luminance + std-dev over the face region of the FINAL processed photo
+ * (grayscale stats), feeding the brightness/contrast compliance checks.
+ */
+async function faceRegionStats(
+  processedBytes: Buffer,
+  processedWidth: number,
+  processedHeightPx: number,
+  eyeLinePct: number
+): Promise<{ brightness: number; contrast: number }> {
+  // Sample a box centered vertically on the eye line, spanning the middle
+  // third of the width — a cheap, dependency-free stand-in for a proper
+  // face-region crop (exact landmark boxes aren't available post-crop).
+  const eyeY = Math.round(processedHeightPx * (1 - eyeLinePct / 100));
+  const boxH = Math.round(processedHeightPx * 0.25);
+  const boxW = Math.round(processedWidth * 0.4);
+  const top = Math.max(0, Math.min(processedHeightPx - boxH, eyeY - boxH / 2));
+  const left = Math.max(0, Math.round((processedWidth - boxW) / 2));
+
+  const { data, info } = await sharp(processedBytes)
+    .extract({ left, top, width: Math.max(1, boxW), height: Math.max(1, boxH) })
+    .grayscale()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  let sum = 0;
+  for (let i = 0; i < data.length; i++) sum += data[i];
+  const mean = sum / (info.width * info.height);
+
+  let variance = 0;
+  for (let i = 0; i < data.length; i++) variance += (data[i] - mean) ** 2;
+  const stdDev = Math.sqrt(variance / (info.width * info.height));
+
+  return { brightness: mean, contrast: stdDev };
+}
 
 export const runtime = "nodejs";
 
@@ -106,10 +143,18 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     if (e instanceof CropError) return bad(e.message);
     // Generic to client; details go to server logs / Sentry.
-    // eslint-disable-next-line no-console
     console.error("process pipeline error", e);
     return bad("We couldn't process this photo — please try another shot.", 500);
   }
+
+  // Real brightness/contrast stats sampled from the final processed photo
+  // (grayscale mean + std-dev over an eye-line-centered box).
+  const stats = await faceRegionStats(
+    processed.bytes,
+    processed.width,
+    processed.height,
+    processed.crop.eyeLinePct
+  ).catch(() => ({ brightness: 150, contrast: 40 })); // never block purchase on a stats failure
 
   // Compliance report from achieved geometry + client signals + image stats.
   const complianceInput: ComplianceInput = {
@@ -121,8 +166,8 @@ export async function POST(req: NextRequest) {
     smileScore: signals.smileScore,
     faceCount: signals.faceCount,
     glassesDetected: signals.glassesDetected,
-    faceBrightness: 150,
-    faceContrast: 40,
+    faceBrightness: stats.brightness,
+    faceContrast: stats.contrast,
     clothingRgb: signals.clothingRgb,
     backgroundMocked: processed.backgroundMocked,
   };
@@ -162,5 +207,7 @@ export async function POST(req: NextRequest) {
     report,
     purchasable: report.purchasable,
     backgroundMocked: processed.backgroundMocked,
+    headHeightPct: processed.crop.headHeightPct,
+    eyeLinePct: processed.crop.eyeLinePct,
   });
 }

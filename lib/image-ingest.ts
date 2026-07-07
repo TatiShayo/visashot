@@ -78,7 +78,7 @@ export async function ingestUpload(input: Buffer): Promise<IngestedImage> {
 
   // rotate() with no arg applies the EXIF orientation, then we drop metadata by
   // re-encoding (sharp does not copy metadata unless withMetadata() is called).
-  let pipeline = sharp(input, { failOn: "error" }).rotate();
+  const pipeline = sharp(input, { failOn: "error" }).rotate();
   const meta = await pipeline.metadata();
   if (!meta.width || !meta.height) {
     throw new IngestError("Could not read image dimensions");

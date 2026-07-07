@@ -97,7 +97,7 @@ export async function makePrintSheetPdf(
     )
   );
 
-  return renderToBuffer(doc as React.ReactElement);
+  return renderToBuffer(doc as Parameters<typeof renderToBuffer>[0]);
 }
 
 export const PRINT_PAPERS = { "4x6": PAPER_4X6, a4: PAPER_A4 };
