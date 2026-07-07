@@ -10,6 +10,7 @@ import { track } from "@/lib/analytics";
 import { ConsentGate, RetentionBadge } from "@/components/ConsentGate";
 import { AlignmentRing } from "@/components/AlignmentRing";
 import { ComplianceChecklist } from "@/components/ComplianceChecklist";
+import { BeforeAfterSlider } from "@/components/BeforeAfterSlider";
 import type { ComplianceResult } from "@/lib/compliance";
 
 type Stage = "consent" | "capture" | "processing" | "result";
@@ -274,10 +275,19 @@ export function CreateClient({ spec }: { spec: PhotoSpec }) {
 
       {stage === "result" && result && (
         <div className="space-y-6">
-          <div className="relative rounded-card overflow-hidden border border-rule bg-paper">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={result.preview} alt="Processed preview (watermarked)" className="w-full max-h-[420px] object-contain" />
-          </div>
+          {previewUrl ? (
+            <BeforeAfterSlider
+              beforeSrc={previewUrl}
+              afterSrc={result.preview}
+              beforeLabel="Original"
+              afterLabel="Processed"
+            />
+          ) : (
+            <div className="relative rounded-card overflow-hidden border border-rule bg-paper">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={result.preview} alt="Processed preview (watermarked)" className="w-full max-h-[420px] object-contain" />
+            </div>
+          )}
           <RetentionBadge />
           <ComplianceChecklist
             checks={result.report.checks}
