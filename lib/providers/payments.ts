@@ -36,6 +36,8 @@ export interface PaymentProvider {
   createCheckout(input: CheckoutInput): Promise<CheckoutSession>;
   /** Verify signature + parse. Throws on invalid signature. */
   parseWebhook(rawBody: string, signature: string | null): Promise<WebhookEvent>;
+  /** One-click admin refund (PLAYBOOK 4.2 — refunds must be one click). */
+  refund(sessionId: string): Promise<{ ok: boolean; refundId: string | null }>;
   readonly mocked: boolean;
 }
 
@@ -60,6 +62,10 @@ class MockPaymentProvider implements PaymentProvider {
       sessionId: body.sessionId ?? null,
       orderId: body.orderId ?? null,
     };
+  }
+
+  async refund(): Promise<{ ok: boolean; refundId: string | null }> {
+    return { ok: true, refundId: `mock_refund_${Date.now()}` };
   }
 }
 
@@ -113,6 +119,15 @@ class StripePaymentProvider implements PaymentProvider {
       };
     }
     return { type: event.type, sessionId: null, orderId: null };
+  }
+
+  async refund(sessionId: string): Promise<{ ok: boolean; refundId: string | null }> {
+    const session = await this.stripe.checkout.sessions.retrieve(sessionId);
+    if (!session.payment_intent) return { ok: false, refundId: null };
+    const paymentIntentId =
+      typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent.id;
+    const refund = await this.stripe.refunds.create({ payment_intent: paymentIntentId });
+    return { ok: refund.status === "succeeded" || refund.status === "pending", refundId: refund.id };
   }
 }
 

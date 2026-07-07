@@ -38,11 +38,12 @@ export async function POST(req: NextRequest) {
   for (const order of abandoned) {
     if (!order.email) continue;
     const spec = getSpecOrThrow(order.specId);
+    const checkoutUrl = `${env.appUrl}/checkout/${order.id}`;
     await email.send({
       to: order.email,
       subject: `Your ${spec.displayName} is still waiting`,
-      text: `Finish your ${spec.displayName} and take 20% off with code ${code}. ${env.appUrl}/order/${order.id}`,
-      html: `<p>Your <strong>${spec.displayName}</strong> is ready to download.</p><p>Use code <strong>${code}</strong> for 20% off. <a href="${env.appUrl}/order/${order.id}">Finish now</a>.</p>`,
+      text: `Finish your ${spec.displayName} and take 20% off with code ${code}. ${checkoutUrl}`,
+      html: `<p>Your <strong>${spec.displayName}</strong> is ready to download.</p><p>Use code <strong>${code}</strong> for 20% off. <a href="${checkoutUrl}">Finish now</a>.</p>`,
     });
     await store.update(order.id, { recoveryEmailSent: true });
     sent += 1;

@@ -91,7 +91,6 @@ export default async function SpecPage({
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-10 sm:py-16">
       <script
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
       />
 

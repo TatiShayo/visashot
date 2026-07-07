@@ -46,7 +46,7 @@ export function OrderSuccessClient({
     };
     document.addEventListener("click", handler);
     return () => document.removeEventListener("click", handler);
-  }, [orderId, specId]);
+  }, [orderId, specId, amountCents, addonCount]);
 
   return null;
 }
