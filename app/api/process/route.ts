@@ -25,6 +25,8 @@ import { getStorage } from "@/lib/providers/storage";
 import { getOrderStore } from "@/lib/orders";
 import { BASE_PRICE_CENTS } from "@/lib/pricing";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { getTurnstileProvider } from "@/lib/providers/turnstile";
+import { env } from "@/lib/env";
 
 /**
  * Mean luminance + std-dev over the face region of the FINAL processed photo
@@ -103,6 +105,18 @@ export async function POST(req: NextRequest) {
     form = await req.formData();
   } catch {
     return bad("Expected multipart/form-data");
+  }
+
+  // Invisible Turnstile check — this endpoint calls paid third-party APIs
+  // (Replicate), so it's the one bots will target. Mocked (always passes)
+  // when TURNSTILE_SECRET_KEY isn't configured, per "never stall on missing
+  // keys" — see NEEDS HUMAN for enabling this for real in production.
+  if (env.turnstileSecretKey) {
+    const turnstileToken = String(form.get("turnstileToken") ?? "");
+    const verdict = await getTurnstileProvider().verify(turnstileToken, ip);
+    if (!verdict.ok) {
+      return bad("Verification failed — please reload and try again.", 403);
+    }
   }
 
   const specId = String(form.get("specId") ?? "");

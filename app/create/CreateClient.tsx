@@ -11,6 +11,7 @@ import { ConsentGate, RetentionBadge } from "@/components/ConsentGate";
 import { AlignmentRing } from "@/components/AlignmentRing";
 import { ComplianceChecklist } from "@/components/ComplianceChecklist";
 import { BeforeAfterSlider } from "@/components/BeforeAfterSlider";
+import { useTurnstile } from "@/components/TurnstileWidget";
 import type { ComplianceResult } from "@/lib/compliance";
 
 type Stage = "consent" | "capture" | "processing" | "result";
@@ -43,6 +44,7 @@ export function CreateClient({ spec }: { spec: PhotoSpec }) {
   const [error, setError] = useState<string | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { token: turnstileToken, mount: turnstileMount } = useTurnstile();
 
   useEffect(() => {
     if (stage !== "processing") return;
@@ -123,6 +125,7 @@ export function CreateClient({ spec }: { spec: PhotoSpec }) {
       const form = new FormData();
       form.set("specId", spec.id);
       form.set("photo", file);
+      form.set("turnstileToken", turnstileToken);
       form.set(
         "landmarks",
         JSON.stringify(landmarksFromPoints(detection.points, imgRef.current))
@@ -180,6 +183,7 @@ export function CreateClient({ spec }: { spec: PhotoSpec }) {
 
   return (
     <div className="mx-auto max-w-2xl px-4 sm:px-6 py-10 sm:py-16">
+      {turnstileMount}
       <p className="font-mono text-xs uppercase tracking-widest text-accent mb-2">
         {spec.displayName}
       </p>
