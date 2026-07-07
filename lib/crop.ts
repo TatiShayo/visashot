@@ -96,13 +96,16 @@ export function computeCropRect(
   // Eye line measured from the bottom: distance from crop TOP to the eyes.
   const eyeFromTop = cropHeight * (1 - targetEyePct / 100);
   const top = eyeY - eyeFromTop;
-  const left = faceCenterX - cropWidth / 2;
 
+  const width = Math.max(1, Math.round(cropWidth));
+  const height = Math.max(1, Math.round(cropHeight));
+  // Center on the face using the ROUNDED width so the rect's center stays as
+  // close as possible to faceCenterX (error <= 0.5px for odd widths).
   const rect: CropRect = {
-    left: Math.round(left),
+    left: Math.round(faceCenterX - width / 2),
     top: Math.round(top),
-    width: Math.max(1, Math.round(cropWidth)),
-    height: Math.max(1, Math.round(cropHeight)),
+    width,
+    height,
   };
 
   // Warnings: synthetic background is fine above/beside the head, but if the

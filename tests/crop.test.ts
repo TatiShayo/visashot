@@ -49,7 +49,9 @@ describe("computeCropRect", () => {
 
   it("centers the face horizontally", () => {
     const { rect } = computeCropRect(centered, 3000, 4000, US);
-    expect(rect.left + rect.width / 2).toBeCloseTo(centered.faceCenterX, 0);
+    // Integer pixel rects: an odd width puts the exact center on a half-pixel,
+    // so the achievable centering error is <= 0.5px.
+    expect(Math.abs(rect.left + rect.width / 2 - centered.faceCenterX)).toBeLessThanOrEqual(0.5);
   });
 
   it("produces in-range results for every spec in the database", () => {
@@ -111,7 +113,7 @@ describe("computeCropRect", () => {
     };
     const res = computeCropRect(lm, 3000, 4000, US);
     expect(res.rect.left).toBeLessThan(0);
-    expect(res.rect.left + res.rect.width / 2).toBeCloseTo(150, 0);
+    expect(Math.abs(res.rect.left + res.rect.width / 2 - 150)).toBeLessThanOrEqual(0.5);
     expect(res.warnings.length).toBeGreaterThan(0);
   });
 
