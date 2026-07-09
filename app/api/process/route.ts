@@ -26,6 +26,7 @@ import { getOrderStore } from "@/lib/orders";
 import { BASE_PRICE_CENTS } from "@/lib/pricing";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 import { getTurnstileProvider } from "@/lib/providers/turnstile";
+import { reportError } from "@/lib/monitoring";
 import { env } from "@/lib/env";
 
 /**
@@ -156,8 +157,8 @@ export async function POST(req: NextRequest) {
     });
   } catch (e) {
     if (e instanceof CropError) return bad(e.message);
-    // Generic to client; details go to server logs / Sentry.
-    console.error("process pipeline error", e);
+    // Generic to client; details go to server logs / Sentry (PLAYBOOK 2.4).
+    reportError(e, { stage: "pipeline", specId: spec.id });
     return bad("We couldn't process this photo — please try another shot.", 500);
   }
 

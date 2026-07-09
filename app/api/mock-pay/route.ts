@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { getOrderStore } from "@/lib/orders";
 import { fulfillOrder } from "@/lib/fulfillment";
+import { reportError } from "@/lib/monitoring";
 
 export const runtime = "nodejs";
 
@@ -25,7 +26,12 @@ export async function POST(req: NextRequest) {
 
   if (order.status === "pending") {
     await store.update(order.id, { status: "paid", paidAtMs: Date.now() });
-    await fulfillOrder(order.id);
+    try {
+      await fulfillOrder(order.id);
+    } catch (e) {
+      reportError(e, { stage: "fulfillment", orderId: order.id, provider: "mock" });
+      return NextResponse.json({ error: "Fulfillment failed" }, { status: 500 });
+    }
   }
   return NextResponse.json({ ok: true, orderId });
 }

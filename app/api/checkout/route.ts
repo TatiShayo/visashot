@@ -13,6 +13,7 @@ import { getOrderStore } from "@/lib/orders";
 import { getSpec } from "@/data/photo-specs";
 import { computePrice } from "@/lib/pricing";
 import { getPaymentProvider } from "@/lib/providers/payments";
+import { reportError } from "@/lib/monitoring";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -65,16 +66,25 @@ export async function POST(req: NextRequest) {
   });
 
   const provider = getPaymentProvider();
-  const session = await provider.createCheckout({
-    orderId: order.id,
-    amountCents: price.totalCents,
-    email: body.email,
-    description: `VisaShot photo set (${1 + validAddons.length} format${
-      validAddons.length ? "s" : ""
-    })`,
-    successUrl: `${env.appUrl}/order/${order.id}`,
-    cancelUrl: `${env.appUrl}/create?spec=${order.specId}`,
-  });
+  let session;
+  try {
+    session = await provider.createCheckout({
+      orderId: order.id,
+      amountCents: price.totalCents,
+      email: body.email,
+      description: `VisaShot photo set (${1 + validAddons.length} format${
+        validAddons.length ? "s" : ""
+      })`,
+      successUrl: `${env.appUrl}/order/${order.id}`,
+      cancelUrl: `${env.appUrl}/create?spec=${order.specId}`,
+    });
+  } catch (e) {
+    reportError(e, { stage: "checkout", orderId: order.id });
+    return NextResponse.json(
+      { error: "Could not start checkout — please try again." },
+      { status: 502 }
+    );
+  }
 
   await store.update(order.id, { stripeSessionId: session.sessionId });
 

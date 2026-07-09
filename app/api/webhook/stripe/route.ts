@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPaymentProvider } from "@/lib/providers/payments";
 import { getOrderStore } from "@/lib/orders";
 import { fulfillOrder } from "@/lib/fulfillment";
+import { reportError } from "@/lib/monitoring";
 
 export const runtime = "nodejs";
 
@@ -39,7 +40,15 @@ export async function POST(req: NextRequest) {
   // Idempotent: only advance a pending order.
   if (order.status === "pending") {
     await store.update(order.id, { status: "paid", paidAtMs: Date.now() });
-    await fulfillOrder(order.id);
+    try {
+      await fulfillOrder(order.id);
+    } catch (e) {
+      // A paid customer not getting their files is the highest-value alert.
+      // Capture, then return non-2xx so Stripe retries (fulfillOrder is
+      // idempotent, so a retry is safe).
+      reportError(e, { stage: "fulfillment", orderId: order.id });
+      return NextResponse.json({ error: "Fulfillment failed" }, { status: 500 });
+    }
   }
 
   return NextResponse.json({ received: true });
