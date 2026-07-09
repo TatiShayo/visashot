@@ -18,8 +18,6 @@
  * the absence of the package can never break the build or a request.
  */
 
-import { env } from "@/lib/env";
-
 export type MonitoringContext = Record<string, string | number | boolean | null>;
 
 export interface MonitoringProvider {
@@ -95,7 +93,11 @@ class SentryMonitoringProvider implements MonitoringProvider {
  * the package is absent this returns null and we fall back to the no-op.
  */
 function resolveSentry(): SentryLike | null {
-  if (!env.sentryDsn) return null;
+  // Read live (not via lib/env's module-load-time snapshot) so tests can
+  // toggle SENTRY_DSN per-case and getMonitoring() picks it up immediately
+  // after __resetMonitoringForTests().
+  const dsn = process.env.SENTRY_DSN;
+  if (!dsn || dsn.trim() === "") return null;
   const g = globalThis as unknown as { __SENTRY__?: unknown; Sentry?: SentryLike };
   // `@sentry/nextjs` exposes captureException/captureMessage on a global once
   // its config module has run. If it isn't there, we haven't been wired yet.

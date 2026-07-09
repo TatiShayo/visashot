@@ -8,6 +8,7 @@ import { z } from "zod";
 import { isAdminAuthorized, recordAudit } from "@/lib/admin-auth";
 import { getOrderStore } from "@/lib/orders";
 import { getPaymentProvider } from "@/lib/providers/payments";
+import { reportError } from "@/lib/monitoring";
 
 export const runtime = "nodejs";
 
@@ -37,8 +38,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No payment session on this order" }, { status: 409 });
   }
 
-  const result = await getPaymentProvider().refund(order.stripeSessionId);
+  let result;
+  try {
+    result = await getPaymentProvider().refund(order.stripeSessionId);
+  } catch (e) {
+    reportError(e, { stage: "admin-refund", orderId: order.id });
+    return NextResponse.json({ error: "Refund failed at the payment provider" }, { status: 502 });
+  }
   if (!result.ok) {
+    reportError(new Error("Refund provider returned ok: false"), {
+      stage: "admin-refund",
+      orderId: order.id,
+    });
     return NextResponse.json({ error: "Refund failed at the payment provider" }, { status: 502 });
   }
 

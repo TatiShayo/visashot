@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { getStorage } from "@/lib/providers/storage";
+import { reportError } from "@/lib/monitoring";
 
 export const runtime = "nodejs";
 
@@ -24,13 +25,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const storage = getStorage();
-  const expired = await storage.listExpired(Date.now());
-  let purged = 0;
-  for (const key of expired) {
-    await storage.remove(key);
-    purged += 1;
+  try {
+    const expired = await storage.listExpired(Date.now());
+    let purged = 0;
+    for (const key of expired) {
+      await storage.remove(key);
+      purged += 1;
+    }
+    return NextResponse.json({ purged });
+  } catch (e) {
+    // Silent purge failures mean biometric-adjacent data outlives its
+    // retention window — a compliance-relevant alert, not just ops noise.
+    reportError(e, { stage: "cron-purge" });
+    return NextResponse.json({ error: "Purge failed" }, { status: 500 });
   }
-  return NextResponse.json({ purged });
 }
 
 export const GET = POST;

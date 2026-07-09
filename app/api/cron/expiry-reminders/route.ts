@@ -11,6 +11,7 @@ import { env } from "@/lib/env";
 import { getOrderStore } from "@/lib/orders";
 import { getEmailProvider } from "@/lib/providers/email";
 import { getSpecOrThrow } from "@/data/photo-specs";
+import { reportError } from "@/lib/monitoring";
 
 export const runtime = "nodejs";
 
@@ -45,19 +46,24 @@ export async function POST(req: NextRequest) {
     const due = await store.listForExpiryReminders(stage, Date.now());
     for (const order of due) {
       if (!order.email) continue;
-      const spec = getSpecOrThrow(order.specId);
-      const copy = STAGE_COPY[stage];
-      const url = `${env.appUrl}/create?spec=${spec.id}`;
-      await email.send({
-        to: order.email,
-        subject: copy.subject(spec.displayName),
-        text: copy.body(spec.displayName, url),
-        html: `<p>${copy.body(spec.displayName, url)}</p>`,
-      });
-      await store.update(order.id, {
-        [stage === "6mo" ? "expiryReminder6moSent" : "expiryReminder1moSent"]: true,
-      });
-      sent += 1;
+      try {
+        const spec = getSpecOrThrow(order.specId);
+        const copy = STAGE_COPY[stage];
+        const url = `${env.appUrl}/create?spec=${spec.id}`;
+        await email.send({
+          to: order.email,
+          subject: copy.subject(spec.displayName),
+          text: copy.body(spec.displayName, url),
+          html: `<p>${copy.body(spec.displayName, url)}</p>`,
+        });
+        await store.update(order.id, {
+          [stage === "6mo" ? "expiryReminder6moSent" : "expiryReminder1moSent"]: true,
+        });
+        sent += 1;
+      } catch (e) {
+        // One order's send failure shouldn't sink the whole cron batch.
+        reportError(e, { stage: "cron-expiry-reminders", orderId: order.id, reminderStage: stage });
+      }
     }
   }
 

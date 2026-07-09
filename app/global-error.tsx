@@ -51,6 +51,9 @@ export default function GlobalError({
           <p style={{ color: "#44506b", lineHeight: 1.6, marginBottom: "2rem" }}>
             Your photo is safe and nothing was charged. Please reload the page.
           </p>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- this
+              boundary replaces the root layout entirely (renders its own
+              <html>/<body>), so next/link's router context isn't available. */}
           <a
             href="/"
             style={{

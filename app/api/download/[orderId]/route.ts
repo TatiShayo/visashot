@@ -14,6 +14,7 @@ import { verifyDownloadToken, DELIVERABLE_KINDS, type DeliverableKind } from "@/
 import { getOrderStore } from "@/lib/orders";
 import { getStorage } from "@/lib/providers/storage";
 import { getSpecOrThrow } from "@/data/photo-specs";
+import { reportError } from "@/lib/monitoring";
 
 export const runtime = "nodejs";
 
@@ -64,7 +65,15 @@ export async function GET(
 
   const spec = getSpecOrThrow(order.specId);
   const key = KEY_FOR[kind](orderId, spec.id);
-  const bytes = await getStorage().get(key);
+  let bytes;
+  try {
+    bytes = await getStorage().get(key);
+  } catch (e) {
+    // A paid customer failing to fetch a file they already bought is a
+    // high-value alert — same tier as a fulfillment failure.
+    reportError(e, { stage: "download", orderId, kind });
+    return NextResponse.json({ error: "File not ready" }, { status: 500 });
+  }
   if (!bytes) return NextResponse.json({ error: "File not ready" }, { status: 404 });
 
   return new NextResponse(new Uint8Array(bytes), {
