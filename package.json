@@ -5,7 +5,7 @@
   "description": "VisaShot - government-compliant passport & visa photos from a selfie in 60 seconds",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node --max-old-space-size=6144 node_modules/next/dist/bin/next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
