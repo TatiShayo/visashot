@@ -84,7 +84,43 @@ function blendshapeScore(result: FaceLandmarkerResult, faceIdx: number, names: s
   return found ? sum / names.length : null;
 }
 
+/**
+ * E2E-only deterministic bypass. The real detector is a genuine ML model
+ * (Google's MediaPipe FaceLandmarker) loaded from a CDN — it requires an
+ * actual face in the frame and network access to the model/WASM, neither of
+ * which a synthetic fixture image or a sandboxed CI run can reliably provide.
+ * Playwright sets NEXT_PUBLIC_E2E_FAKE_FACE=true (see playwright.config.ts)
+ * so e2e specs exercise the REAL app logic downstream of detection (pipeline,
+ * compliance, payments, delivery) without depending on live face recognition,
+ * which is Google's model to test, not this app's. Never set outside e2e.
+ */
+const E2E_FAKE_FACE = process.env.NEXT_PUBLIC_E2E_FAKE_FACE === "true";
+
+function fakeGoodDetection(): DetectedFace {
+  // Centered, upright, single face, eyes open, neutral — passes every
+  // compliance check downstream (head-height/eye-line come from these
+  // normalized points via lib/crop.ts's landmarksFromNormalized mirror).
+  return {
+    faceCount: 1,
+    points: {
+      foreheadTopY: 0.22,
+      chinY: 0.78,
+      leftEyeY: 0.46,
+      rightEyeY: 0.46,
+      leftEyeX: 0.4,
+      rightEyeX: 0.6,
+    },
+    faceTiltDeg: 0,
+    leftEyeClosed: 0,
+    rightEyeClosed: 0,
+    smileScore: 0,
+    hint: "good",
+  };
+}
+
 export async function detectFace(image: HTMLImageElement | HTMLVideoElement): Promise<DetectedFace> {
+  if (E2E_FAKE_FACE) return fakeGoodDetection();
+
   const landmarker = await getLandmarker();
   const result = landmarker.detect(image);
 

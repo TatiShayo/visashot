@@ -29,3 +29,6 @@ npm-debug.log*
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
+/blob-report/
