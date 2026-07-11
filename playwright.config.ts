@@ -19,6 +19,19 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
  * are set, so every provider (bg-removal, payments, email, storage) runs on
  * its typed mock — exactly the "never stall on missing keys" contract the
  * rest of the app already relies on.
+ *
+ * The webServer runs a PRODUCTION build (`next build && next start`), not
+ * `next dev`. next.config.ts's CSP intentionally omits 'unsafe-eval' from
+ * script-src (a real security requirement — dev-only weakening was rejected).
+ * `next dev`'s webpack eval-source-map devtool needs 'unsafe-eval' and, when
+ * blocked by that CSP, throws on page load and silently breaks React event
+ * delegation client-wide (discovered via a `page.on("pageerror")` CSP
+ * violation while debugging a consent checkbox that visually checked but
+ * never enabled the Continue button). Production bundles don't eval(), so
+ * `next start` is unaffected — and it's the more realistic target anyway.
+ * NEXT_PUBLIC_* vars below must be present at BUILD time (inlined into the
+ * client bundle), which is why they're on this single chained command's env
+ * rather than only passed to the `next start` half.
  */
 export default defineConfig({
   testDir: "./e2e",
@@ -40,12 +53,12 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npx next dev -p ${PORT}`,
+    command: `npm run build && npx next start -p ${PORT}`,
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
-    // Generous: a cold `next dev` first-compile (no warm .next/cache) can
-    // take well over 60s in this environment; observed ~25s once warm.
-    timeout: 240_000,
+    // Generous: a full production build (type-check + static generation of
+    // 72 pages) runs before the server can even start listening.
+    timeout: 300_000,
     env: {
       NEXT_PUBLIC_E2E_FAKE_FACE: "true",
       NEXT_PUBLIC_APP_URL: BASE_URL,
