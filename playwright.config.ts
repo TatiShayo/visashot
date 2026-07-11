@@ -57,8 +57,9 @@ export default defineConfig({
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     // Generous: a full production build (type-check + static generation of
-    // 72 pages) runs before the server can even start listening.
-    timeout: 300_000,
+    // 72 pages) runs before the server can even start listening — measured
+    // at ~8 minutes on this box even with the raised Node heap.
+    timeout: 900_000,
     env: {
       NEXT_PUBLIC_E2E_FAKE_FACE: "true",
       NEXT_PUBLIC_APP_URL: BASE_URL,
