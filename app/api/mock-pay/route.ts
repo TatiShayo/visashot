@@ -14,7 +14,7 @@ import { reportError } from "@/lib/monitoring";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  if (env.stripeSecretKey || env.isProd) {
+  if (env.stripeSecretKey || env.isRealProdDeployment) {
     return NextResponse.json({ error: "Mock payments are disabled" }, { status: 403 });
   }
   const { orderId } = (await req.json().catch(() => ({}))) as { orderId?: string };

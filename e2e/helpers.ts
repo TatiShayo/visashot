@@ -37,8 +37,17 @@ export async function uploadAndProcess(page: Page): Promise<Response> {
     processButton.click(),
   ]);
 
-  // Compliance sequence finishes with the embossed "Compliant" seal.
-  await expect(page.getByText("Compliant", { exact: true })).toBeVisible({ timeout: 10_000 });
+  // Compliance sequence finished rendering. Note: the embossed "Compliant"
+  // seal only stamps when overall === "pass" (components/ComplianceChecklist.tsx),
+  // but bg-removal is intentionally mocked in this webServer env (no
+  // REPLICATE_API_TOKEN — see playwright.config.ts), so lib/compliance.ts
+  // always flags `backgroundMocked` as a WARN ("preview mode") check. That
+  // makes overall "warn", not "pass", so the seal never appears here even on
+  // a fully successful run — asserting on it would make this test unrunnable
+  // by construction. Wait on the "Continue" CTA instead: it only renders once
+  // `purchasable` (overall !== "fail") and is exactly what the flow clicks
+  // next, so it's the real, reliable signal that processing succeeded.
+  await expect(page.getByRole("link", { name: /Continue — \$/ })).toBeVisible({ timeout: 10_000 });
 
   return processResponse;
 }

@@ -48,7 +48,16 @@ export async function GET(
   }
 
   // Gate 1: signature + expiry.
-  const sig = verifyDownloadToken(orderId, kind, token);
+  let sig;
+  try {
+    sig = verifyDownloadToken(orderId, kind, token);
+  } catch (e) {
+    // Misconfiguration (e.g. DOWNLOAD_SIGNING_SECRET missing in real prod —
+    // see lib/env.ts's requireSigningSecret) must fail closed, not leak a
+    // 500 with a stack trace to an unauthenticated caller.
+    reportError(e, { stage: "download-sign", orderId, kind });
+    return NextResponse.json({ error: "Invalid link" }, { status: 403 });
+  }
   if (!sig.ok) {
     return NextResponse.json(
       { error: sig.reason === "expired" ? "This link has expired" : "Invalid link" },

@@ -43,6 +43,20 @@ export const env = {
   recoveryPromoCode: str("RECOVERY_PROMO_CODE"),
 
   isProd: process.env.NODE_ENV === "production",
+
+  /**
+   * True only on a REAL Vercel production deployment — distinct from `isProd`,
+   * which is just `NODE_ENV === "production"` and is ALSO true for a local
+   * `next build && next start` (e.g. the Playwright e2e webServer, which
+   * intentionally runs a production build to match next.config.ts's CSP —
+   * see playwright.config.ts). Vercel injects `VERCEL_ENV` ("production" /
+   * "preview" / "development") on every deployment; it is never set for a
+   * locally-run prod-mode build. Guards that must refuse to activate on the
+   * real live site (mock payments, requiring a real signing secret) should
+   * check THIS, not `isProd` — otherwise they also (and wrongly) refuse to
+   * run in the local e2e prod-mode build, which has no real user-facing risk.
+   */
+  isRealProdDeployment: process.env.VERCEL_ENV === "production",
 } as const;
 
 /** True when Stripe is not configured and the dev mock-payment flow is active. */
@@ -56,7 +70,7 @@ export function mockPaymentsActive(): boolean {
  */
 export function requireSigningSecret(): string {
   if (env.downloadSigningSecret) return env.downloadSigningSecret;
-  if (env.isProd) {
+  if (env.isRealProdDeployment) {
     throw new Error(
       "DOWNLOAD_SIGNING_SECRET is required in production (see .env.example)"
     );
