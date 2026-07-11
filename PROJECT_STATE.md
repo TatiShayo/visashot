@@ -313,6 +313,10 @@ exercised). Real MediaPipe detection is never exercised in CI (by design —
   `schengen-visa`, `uk-passport`, `australia-passport`, and others with an
   explicit government-published head/eye diagram — are NOT flagged and cite
   a `sourceUrl` with exact figures already.)
+- **Ops safety note**: the mock-pay kill guard checks `STRIPE_SECRET_KEY`
+  presence OR `VERCEL_ENV==="production"`. If you ever deploy anywhere other
+  than Vercel, set `STRIPE_SECRET_KEY` (or remove `/api/mock-pay`) before
+  going live — otherwise mock payments stay enabled.
 - **Ops (no deploy performed)**: Vercel prod deploy, Stripe webhook
   registration (`vercel.json` cron schedules are defined and ready but only
   run once deployed), Supabase project creation + storage bucket + confirm
