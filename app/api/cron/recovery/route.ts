@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
+import { tokensMatch } from "@/lib/admin-auth";
 import { getOrderStore } from "@/lib/orders";
 import { getEmailProvider } from "@/lib/providers/email";
 import { getSpecOrThrow } from "@/data/photo-specs";
@@ -19,7 +20,8 @@ const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
 
 function authorized(req: NextRequest): boolean {
   if (!env.cronSecret) return !env.isProd;
-  return req.headers.get("authorization") === `Bearer ${env.cronSecret}`;
+  const auth = req.headers.get("authorization") ?? "";
+  return auth.startsWith("Bearer ") && tokensMatch(auth.slice(7), env.cronSecret);
 }
 
 export async function POST(req: NextRequest) {

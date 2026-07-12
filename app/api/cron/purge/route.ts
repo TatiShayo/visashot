@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
+import { tokensMatch } from "@/lib/admin-auth";
 import { getStorage } from "@/lib/providers/storage";
 import { reportError } from "@/lib/monitoring";
 
@@ -16,8 +17,8 @@ export const runtime = "nodejs";
 function authorized(req: NextRequest): boolean {
   // In production CRON_SECRET is required. In dev (no secret) allow local runs.
   if (!env.cronSecret) return !env.isProd;
-  const auth = req.headers.get("authorization");
-  return auth === `Bearer ${env.cronSecret}`;
+  const auth = req.headers.get("authorization") ?? "";
+  return auth.startsWith("Bearer ") && tokensMatch(auth.slice(7), env.cronSecret);
 }
 
 export async function POST(req: NextRequest) {
