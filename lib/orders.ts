@@ -22,6 +22,15 @@ export interface ComplianceReport {
   backgroundMocked: boolean;
 }
 
+/** Face landmarks captured at process time (source-image pixel space) —
+ * persisted so fulfillment can re-crop the ORIGINAL for add-on specs. */
+export interface StoredLandmarks {
+  crownY: number;
+  chinY: number;
+  eyeY: number;
+  faceCenterX: number;
+}
+
 export interface Order {
   id: string;
   email: string | null;
@@ -34,6 +43,8 @@ export interface Order {
   watermarkedKey: string | null;
   printSheetKey: string | null;
   stripeSessionId: string | null;
+  /** Landmarks from processing — needed to fulfill add-on specs. */
+  landmarks: StoredLandmarks | null;
   status: OrderStatus;
   complianceReport: ComplianceReport | null;
   amountCents: number;
@@ -98,6 +109,7 @@ function blankOrder(input: CreateOrderInput): Order {
     watermarkedKey: null,
     printSheetKey: null,
     stripeSessionId: null,
+    landmarks: null,
     status: "pending",
     complianceReport: null,
     amountCents: input.amountCents,
@@ -250,6 +262,7 @@ class SupabaseOrderStore implements OrderStore {
     if (o.watermarkedKey !== undefined) row.watermarked_path = o.watermarkedKey;
     if (o.printSheetKey !== undefined) row.print_sheet_path = o.printSheetKey;
     if (o.stripeSessionId !== undefined) row.stripe_session_id = o.stripeSessionId;
+    if (o.landmarks !== undefined) row.landmarks = o.landmarks;
     if (o.status !== undefined) row.status = o.status;
     if (o.complianceReport !== undefined) row.compliance_report = o.complianceReport;
     if (o.amountCents !== undefined) row.amount_cents = o.amountCents;
@@ -273,6 +286,7 @@ class SupabaseOrderStore implements OrderStore {
       watermarkedKey: (r.watermarked_path as string) ?? null,
       printSheetKey: (r.print_sheet_path as string) ?? null,
       stripeSessionId: (r.stripe_session_id as string) ?? null,
+      landmarks: (r.landmarks as StoredLandmarks) ?? null,
       status: (r.status as OrderStatus) ?? "pending",
       complianceReport: (r.compliance_report as ComplianceReport) ?? null,
       amountCents: Number(r.amount_cents ?? 0),

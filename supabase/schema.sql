@@ -22,6 +22,9 @@ create table if not exists orders (
   watermarked_path text,
   print_sheet_path text,
   stripe_session_id text,
+  -- Face landmarks captured at process time (source-image px space), used by
+  -- fulfillment to re-crop the original for add-on specs.
+  landmarks jsonb,
   status text not null default 'pending'
     check (status in ('pending', 'paid', 'delivered', 'refunded')),
   compliance_report jsonb,
