@@ -207,6 +207,14 @@ export async function POST(req: NextRequest) {
     originalKey,
     processedKey: cleanKey,
     watermarkedKey: previewKey,
+    // Persisted so fulfillment can re-crop the ORIGINAL for any add-on specs
+    // bought at checkout (each spec has its own aspect/geometry).
+    landmarks: {
+      crownY: landmarks.crownY,
+      chinY: landmarks.chinY,
+      eyeY: landmarks.eyeY,
+      faceCenterX: landmarks.faceCenterX,
+    },
     complianceReport: {
       overall: report.overall,
       checks: report.checks,

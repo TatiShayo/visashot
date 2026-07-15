@@ -42,6 +42,7 @@ export async function GET(
   const url = new URL(req.url);
   const kind = url.searchParams.get("kind") as DeliverableKind | null;
   const token = url.searchParams.get("token");
+  const specParam = url.searchParams.get("spec");
 
   if (!kind || !DELIVERABLE_KINDS.includes(kind) || !token) {
     return NextResponse.json({ error: "Invalid download request" }, { status: 400 });
@@ -72,7 +73,15 @@ export async function GET(
     return NextResponse.json({ error: "Payment required" }, { status: 402 });
   }
 
-  const spec = getSpecOrThrow(order.specId);
+  // Per-spec entitlement: `spec` must be one this order actually bought
+  // (primary or an add-on). All specs on an order share its single payment, so
+  // no separate token binding is needed — but an unpurchased spec is rejected.
+  const entitledSpecIds = [order.specId, ...order.addonSpecIds];
+  const requestedSpecId = specParam ?? order.specId;
+  if (!entitledSpecIds.includes(requestedSpecId)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  const spec = getSpecOrThrow(requestedSpecId);
   const key = KEY_FOR[kind](orderId, spec.id);
   let bytes;
   try {

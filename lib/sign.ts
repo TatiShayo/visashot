@@ -60,9 +60,13 @@ export function downloadUrl(
   appUrl: string,
   orderId: string,
   kind: DeliverableKind,
-  ttlMs: number = DOWNLOAD_LINK_TTL_MS
+  opts: { specId?: string; ttlMs?: number } = {}
 ): string {
+  const ttlMs = opts.ttlMs ?? DOWNLOAD_LINK_TTL_MS;
   const expiresAtMs = Date.now() + ttlMs;
   const token = signDownloadToken(orderId, kind, expiresAtMs);
-  return `${appUrl}/api/download/${orderId}?kind=${kind}&token=${encodeURIComponent(token)}`;
+  // The token binds orderId+kind+expiry; `spec` selects which purchased format
+  // to fetch and is validated server-side against the order's own spec set.
+  const specQ = opts.specId ? `&spec=${encodeURIComponent(opts.specId)}` : "";
+  return `${appUrl}/api/download/${orderId}?kind=${kind}&token=${encodeURIComponent(token)}${specQ}`;
 }

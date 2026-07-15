@@ -36,12 +36,19 @@ export default async function OrderPage({
     );
   }
 
-  const links = {
-    photo: downloadUrl(env.appUrl, order.id, "photo"),
-    hires: downloadUrl(env.appUrl, order.id, "hires"),
-    sheet4x6: downloadUrl(env.appUrl, order.id, "sheet-4x6"),
-    sheetA4: downloadUrl(env.appUrl, order.id, "sheet-a4"),
-  };
+  const specIds = [order.specId, ...order.addonSpecIds.filter((id) => id !== order.specId)];
+  const specSections = specIds
+    .map((id) => getSpec(id))
+    .filter((s): s is NonNullable<typeof s> => Boolean(s))
+    .map((s) => ({
+      spec: s,
+      links: {
+        photo: downloadUrl(env.appUrl, order.id, "photo", { specId: s.id }),
+        hires: downloadUrl(env.appUrl, order.id, "hires", { specId: s.id }),
+        sheet4x6: downloadUrl(env.appUrl, order.id, "sheet-4x6", { specId: s.id }),
+        sheetA4: downloadUrl(env.appUrl, order.id, "sheet-a4", { specId: s.id }),
+      },
+    }));
 
   return (
     <div className="mx-auto max-w-xl px-4 sm:px-6 py-10 sm:py-16">
@@ -54,12 +61,21 @@ export default async function OrderPage({
         {order.email ? <> · sent to {order.email}</> : null}
       </p>
 
-      <div className="rounded-card border border-rule bg-paper p-5 space-y-3">
-        <DownloadRow href={links.photo} kind="photo" label="Photo (exact spec size)" />
-        <DownloadRow href={links.hires} kind="hires" label="High-res (300dpi)" />
-        <DownloadRow href={links.sheet4x6} kind="sheet-4x6" label="Print sheet — 4×6 in" />
-        <DownloadRow href={links.sheetA4} kind="sheet-a4" label="Print sheet — A4" />
-      </div>
+      {specSections.map(({ spec: s, links }, i) => (
+        <div key={s.id} className={i > 0 ? "mt-6" : undefined}>
+          {specSections.length > 1 ? (
+            <p className="font-mono text-xs uppercase tracking-widest text-ink-soft mb-2">
+              {s.displayName}
+            </p>
+          ) : null}
+          <div className="rounded-card border border-rule bg-paper p-5 space-y-3">
+            <DownloadRow href={links.photo} kind="photo" label="Photo (exact spec size)" />
+            <DownloadRow href={links.hires} kind="hires" label="High-res (300dpi)" />
+            <DownloadRow href={links.sheet4x6} kind="sheet-4x6" label="Print sheet — 4×6 in" />
+            <DownloadRow href={links.sheetA4} kind="sheet-a4" label="Print sheet — A4" />
+          </div>
+        </div>
+      ))}
 
       <p className="mt-4 text-sm text-ink-faint">
         Links expire in 7 days and only work while this order is marked paid.
