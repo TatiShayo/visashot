@@ -24,7 +24,13 @@ const bodySchema = z.object({
   consent: z.literal(true), // biometric consent gate — must be explicitly true
   addonSpecIds: z.array(z.string()).max(6).default([]),
   compliancePlus: z.boolean().default(false),
-  docExpiryIso: z.string().optional(),
+  // REVIEW_FINDINGS M5: strict YYYY-MM-DD, must parse to a real date — never
+  // persist an arbitrary string to the DB.
+  docExpiryIso: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD")
+    .refine((s) => !Number.isNaN(Date.parse(s)), "Not a real date")
+    .optional(),
 });
 
 export async function POST(req: NextRequest) {

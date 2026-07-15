@@ -32,6 +32,27 @@ export interface BgRemovalProvider {
   removeBackground(input: BgRemovalInput): Promise<BgRemovalResult>;
 }
 
+class TransientProviderError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
+/** Retry only what a retry can plausibly fix: timeouts, 429, 5xx, network. */
+function isTransient(e: unknown): boolean {
+  if (e instanceof TransientProviderError) {
+    return e.status === 429 || e.status >= 500;
+  }
+  if (e instanceof Error) {
+    return (
+      e.name === "TimeoutError" ||
+      e.name === "AbortError" ||
+      /fetch failed|network|ECONNRESET|ETIMEDOUT/i.test(e.message)
+    );
+  }
+  return false;
+}
+
 /** SSRF guard for any URL we fetch back from the provider. */
 function assertSafeHttpUrl(raw: string): URL {
   let u: URL;
@@ -71,7 +92,22 @@ class MockBgRemovalProvider implements BgRemovalProvider {
 class ReplicateBgRemovalProvider implements BgRemovalProvider {
   constructor(private readonly token: string) {}
 
+  /**
+   * Retry-once wrapper: Replicate cold-starts and transient 5xx/timeouts are
+   * common enough that a single retry meaningfully cuts user-facing failures,
+   * while never more than doubling the (paid) call count.
+   */
   async removeBackground(input: BgRemovalInput): Promise<BgRemovalResult> {
+    try {
+      return await this.attempt(input);
+    } catch (first) {
+      if (!isTransient(first)) throw first;
+      await new Promise((r) => setTimeout(r, 1_500));
+      return this.attempt(input);
+    }
+  }
+
+  private async attempt(input: BgRemovalInput): Promise<BgRemovalResult> {
     const dataUri = `data:${input.contentType};base64,${input.image.toString("base64")}`;
 
     const res = await fetch("https://api.replicate.com/v1/predictions", {
@@ -91,7 +127,7 @@ class ReplicateBgRemovalProvider implements BgRemovalProvider {
     });
 
     if (!res.ok) {
-      throw new Error(`Replicate error ${res.status}`);
+      throw new TransientProviderError(`Replicate error ${res.status}`, res.status);
     }
     const json = (await res.json()) as {
       status: string;
@@ -105,7 +141,9 @@ class ReplicateBgRemovalProvider implements BgRemovalProvider {
     const safe = assertSafeHttpUrl(outUrl);
 
     const imgRes = await fetch(safe, { signal: AbortSignal.timeout(30_000) });
-    if (!imgRes.ok) throw new Error(`Failed to fetch result: ${imgRes.status}`);
+    if (!imgRes.ok) {
+      throw new TransientProviderError(`Failed to fetch result: ${imgRes.status}`, imgRes.status);
+    }
     const buf = Buffer.from(await imgRes.arrayBuffer());
     if (buf.byteLength > 25 * 1024 * 1024) {
       throw new Error("Provider result exceeds size cap");

@@ -46,6 +46,13 @@ export default async function OgImage({ params }: { params: { specId: string } }
         )}
       </div>
     ),
-    { ...size }
+    {
+      ...size,
+      // Spec pages are static content — let CDNs cache the OG image for a day
+      // instead of re-rendering it per crawler hit.
+      headers: {
+        "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
+      },
+    }
   );
 }

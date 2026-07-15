@@ -25,6 +25,7 @@ import { getStorage } from "@/lib/providers/storage";
 import { getOrderStore } from "@/lib/orders";
 import { BASE_PRICE_CENTS } from "@/lib/pricing";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { processingSemaphore } from "@/lib/semaphore";
 import { getTurnstileProvider } from "@/lib/providers/turnstile";
 import { reportError } from "@/lib/monitoring";
 import { env } from "@/lib/env";
@@ -146,15 +147,27 @@ export async function POST(req: NextRequest) {
     return bad("Could not read the uploaded image");
   }
 
+  // Concurrency cap: each pipeline is a paid Replicate call + several full-
+  // image sharp passes. Bound how many run (and wait) at once; past that,
+  // shed load with a 503 instead of OOMing the instance.
   let processed;
   try {
-    processed = await processPhoto({
-      imageBytes: ingested.bytes,
-      imageWidth: ingested.width,
-      imageHeight: ingested.height,
-      landmarks,
-      spec,
-    });
+    const slot = await processingSemaphore.run(() =>
+      processPhoto({
+        imageBytes: ingested.bytes,
+        imageWidth: ingested.width,
+        imageHeight: ingested.height,
+        landmarks,
+        spec,
+      })
+    );
+    if (!slot.ok) {
+      return NextResponse.json(
+        { error: "We're at capacity right now — please try again in a minute." },
+        { status: 503, headers: { "Retry-After": "60" } }
+      );
+    }
+    processed = slot.value;
   } catch (e) {
     if (e instanceof CropError) return bad(e.message);
     // Generic to client; details go to server logs / Sentry (PLAYBOOK 2.4).

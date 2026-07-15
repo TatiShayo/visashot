@@ -15,6 +15,13 @@ import sharp from "sharp";
 
 export const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 
+/**
+ * Hard decoder cap (REVIEW_FINDINGS M2): our 60MP metadata guard runs before a
+ * full decode, but defense-in-depth demands the decoder itself refuses to
+ * allocate past the same bound (sharp's default is ~268MP).
+ */
+export const MAX_INPUT_PIXELS = 60_000_000;
+
 export type DetectedType = "jpeg" | "png" | "webp";
 
 export class IngestError extends Error {}
@@ -78,18 +85,27 @@ export async function ingestUpload(input: Buffer): Promise<IngestedImage> {
 
   // rotate() with no arg applies the EXIF orientation, then we drop metadata by
   // re-encoding (sharp does not copy metadata unless withMetadata() is called).
-  const pipeline = sharp(input, { failOn: "error" }).rotate();
+  const pipeline = sharp(input, {
+    failOn: "error",
+    limitInputPixels: MAX_INPUT_PIXELS,
+  }).rotate();
   const meta = await pipeline.metadata();
   if (!meta.width || !meta.height) {
     throw new IngestError("Could not read image dimensions");
   }
-  // Guard against decompression bombs.
-  if (meta.width * meta.height > 60_000_000) {
+  // Guard against decompression bombs (friendly error before the decoder cap).
+  if (meta.width * meta.height > MAX_INPUT_PIXELS) {
     throw new IngestError("Image resolution is too high");
   }
 
-  const bytes = await pipeline.png().toBuffer();
-  const outMeta = await sharp(bytes).metadata();
+  let bytes: Buffer;
+  try {
+    bytes = await pipeline.png().toBuffer();
+  } catch {
+    // limitInputPixels trips here for bombs that lie in their metadata.
+    throw new IngestError("Image resolution is too high");
+  }
+  const outMeta = await sharp(bytes, { limitInputPixels: MAX_INPUT_PIXELS }).metadata();
 
   return {
     bytes,
