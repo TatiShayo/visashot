@@ -4,16 +4,41 @@
 > A fresh session with zero memory must be able to resume from this file alone.
 > Trust the disk over this file if they ever disagree, then correct this file.
 
-## Status: IN PROGRESS — Milestones 2-5 done, Milestone 6 (polish) partial, 7 (security) done, 8 (QA/e2e) DONE — first full green gate this session
+## Status: AUDIT + HARDENING COMPLETE (2026-07-17) — Milestones 2-5 done, 6 partial, 7 done, 8 done; upgrade.txt Phases 2-3,7 audit finalized (see AUDIT_LOG.md + REVIEW_FINDINGS.md)
 
-## Verification gate (last full run 2026-07-11, this session)
+## Verification gate (last full run 2026-07-17, this session)
 - `tsc --noEmit`: PASS (0 errors)
 - `eslint .`: PASS (0 problems)
 - `next build` (NODE_OPTIONS=--max-old-space-size=4096): PASS — 72 static
   pages, 0 type errors
-- `vitest run`: PASS (74/74 across 10 test files)
-- `npx playwright test`: PASS (4/4 — first-ever green e2e run this session;
-  see "Milestone 8" below for the two real bugs this run found and fixed)
+- `vitest run`: PASS (86/86 across 12 test files — includes the new
+  `tests/fulfillment.test.ts` and `tests/semaphore.test.ts`)
+- `npx playwright test`: PASS (4/4)
+
+## Audit session (2026-07-15 → 2026-07-17) — what landed
+
+Full findings in `AUDIT_LOG.md` (phases 2-3,7) and `REVIEW_FINDINGS.md`
+(H1/H2/M1-M5/L1-L5 with statuses). Highlights, all committed + gate-green:
+- **H2 fixed + regression-tested**: paid add-on specs are now actually
+  fulfilled. Landmarks persisted at process time (`orders.landmarks`,
+  schema.sql updated); `fulfillOrder` re-crops the stored original per
+  add-on spec and generates processed/hires/4x6/A4 for EVERY purchased
+  spec; `/api/download` validates a `spec` param against the order's
+  entitlement (unpurchased spec → 404); order page + delivery email list
+  per-spec links. `tests/fulfillment.test.ts` (7 tests).
+- **Billing de-dupe**: duplicated `addonSpecIds` from the client were
+  billed twice; checkout and `orderSpecIds()` now de-dupe (caught by the
+  fulfillment test suite).
+- **H1**: mock Stripe webhook 403s on real prod deployments (same
+  `isRealProdDeployment` guard as mock-pay). **M1**: timing-safe
+  admin/cron token compares. **M2**: sharp `limitInputPixels` 60MP cap on
+  every ingest decode. **M5**: `docExpiryIso` strictly validated.
+- **Perf/reliability**: processing semaphore (bounded concurrency, 503 +
+  Retry-After shed), Replicate timeouts (60s/30s) + transient-only single
+  retry + 25MB result cap, OG image CDN cache headers, error boundaries +
+  monitoring on all failure paths.
+- Docs: ARCHITECTURE.md (system map), AUDIT_LOG.md finalized, README
+  current.
 
 ## Milestone 8 — QA/e2e: DONE this session
 
