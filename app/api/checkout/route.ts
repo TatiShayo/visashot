@@ -57,8 +57,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Order already processed" }, { status: 409 });
   }
 
-  // Validate add-on spec ids exist (ignore unknowns rather than trust them).
-  const validAddons = body.addonSpecIds.filter((id) => getSpec(id) && id !== order.specId);
+  // Validate add-on spec ids exist (ignore unknowns rather than trust them)
+  // and de-dupe — a duplicated id must never be billed twice.
+  const validAddons = [...new Set(body.addonSpecIds)].filter(
+    (id) => getSpec(id) && id !== order.specId
+  );
   const price = computePrice({
     addonSpecCount: validAddons.length,
     compliancePlus: body.compliancePlus,

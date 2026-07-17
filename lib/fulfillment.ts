@@ -27,7 +27,7 @@ import { downloadUrl } from "@/lib/sign";
 
 /** Ordered, de-duplicated list of every spec a paid order is entitled to. */
 export function orderSpecIds(order: Order): string[] {
-  return [order.specId, ...order.addonSpecIds.filter((id) => id !== order.specId)];
+  return [...new Set([order.specId, ...order.addonSpecIds])];
 }
 
 /** Storage key for the clean, exact-spec processed photo of a given spec. */
