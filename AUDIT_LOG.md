@@ -147,3 +147,17 @@ Companion docs: `ARCHITECTURE.md` (system map), `REVIEW_FINDINGS.md`
 `tsc --noEmit` · `eslint .` · `next build` (4GB heap) · `vitest run` ·
 `playwright test` — results recorded in PROJECT_STATE.md after each full
 run; the gate is never left broken between commits.
+
+---
+
+## Fresh-Eyes Pass (July 22, 2026)
+
+- **Re-verification Gate**:
+  - `tsc --noEmit`: Exit 0 (passed cleanly)
+  - `eslint .`: Exit 0 (passed cleanly)
+  - `vitest run`: 86/86 tests passed in 18.17s across 12 test files (including 7/7 primary + add-on spec fulfillment tests)
+  - `next build`: Exit 0 (72 static/SSG pages compiled successfully in 14.7s)
+- **Fix Applied**: Updated `app/layout.tsx` & `app/globals.css` font loading to avoid network build-time failures when Google Fonts is unreachable offline.
+- **Codebase Sweep**: Re-verified per-spec add-on fulfillment (`lib/fulfillment.ts`), mock webhook production guard (`H1`), and image ingest bounds (`M2`).
+- **Findings**: Codebase is fully functional, all 86 unit tests pass, and Next.js production build completes cleanly.
+
