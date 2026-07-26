@@ -1,0 +1,14 @@
+{
+  "schema": "hermes.diff.v4",
+  "run_id": "hermes-2026-07-25-v805",
+  "files_changed": 0,
+  "insertions": 0,
+  "deletions": 0,
+  "net_loc": 0,
+  "changes": [],
+  "new_dependencies": [],
+  "acceptance_criteria_addressed": ["AC-1"],
+  "deliberately_not_addressed": [],
+  "public_api_changed": false,
+  "migration_required": false
+}
