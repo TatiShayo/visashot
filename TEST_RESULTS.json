@@ -1,47 +1,21 @@
 {
-  "schema": "hermes.tests.v4",
-  "run_id": "hermes-2026-07-25-v805",
-  "status": "pass",
-  "counts": {
-    "passed": 86,
+  "schema": "hermes.tests.v6",
+  "run_id": "hermes-2026-07-27-v6-visashot",
+  "project": "visashot",
+  "produced_at": "2026-07-27T22:07:08.832075",
+  "summary": {
+    "status": "RUNNABLE",
+    "passed": 1,
     "failed": 0,
     "skipped": 0,
-    "flaky": 0
+    "unrunnable": 0
   },
-  "failures": [],
-  "coverage": {
-    "line_pct": 96.4,
-    "branch_pct": 94.8,
-    "uncovered_new_paths": []
-  },
-  "mutation": {
-    "mutants_generated": 60,
-    "mutants_killed": 58,
-    "score": 96.7,
-    "surviving_examples": []
-  },
-  "properties": [
+  "suites": [
     {
-      "name": "watermark_prepayment_isolation",
-      "invariant": "Pre-payment API responses return only watermarked previews and never clean unwatermarked asset bytes",
-      "cases_run": 500,
-      "counterexample": null
-    },
-    {
-      "name": "sheet_layout_paper_spec_fit",
-      "invariant": "Every spec in database fits paper dimensions for 1 to 8 photo counts",
-      "cases_run": 1000,
-      "counterexample": null
+      "suite": "TypeScript Compilation",
+      "tool": "npx tsc --noEmit",
+      "status": "PASS",
+      "exit_code": 0
     }
-  ],
-  "performance": {
-    "baseline_ms": 2840,
-    "current_ms": 2840,
-    "regression_pct": 0.0
-  },
-  "environment": {
-    "hermetic": true,
-    "seed": 1337,
-    "external_hosts_contacted": []
-  }
+  ]
 }

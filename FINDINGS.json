@@ -1,10 +1,10 @@
 {
-  "schema": "hermes.findings.v4",
-  "run_id": "hermes-2026-07-25-v805",
+  "schema": "hermes.findings.v6",
+  "run_id": "hermes-2026-07-27-v6-visashot",
   "project": "visashot",
-  "phase": "8.0",
-  "produced_at": "2026-07-25T12:21:00+03:00",
-  "inputs_hash": "sha256:6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e",
-  "budget_spent": { "tokens": 105000, "wallclock_s": 260, "usd": 0.50 },
+  "phase": "4.0",
+  "produced_at": "2026-07-27T22:07:08.832075",
+  "runner_tier": "T1",
+  "mode": "static-only",
   "findings": []
 }
