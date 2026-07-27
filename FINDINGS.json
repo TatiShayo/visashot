@@ -3,7 +3,7 @@
   "run_id": "hermes-2026-07-27-v6-visashot",
   "project": "visashot",
   "phase": "4.0",
-  "produced_at": "2026-07-27T22:48:02.730086",
+  "produced_at": "2026-07-27T22:48:46.988435",
   "runner_tier": "T1",
   "mode": "static-only",
   "findings": []
