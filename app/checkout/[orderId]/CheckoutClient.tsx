@@ -70,7 +70,11 @@ export function CheckoutClient({
         setSubmitting(false);
         return;
       }
-      router.push(json.url);
+      if (json.url.startsWith("http://") || json.url.startsWith("https://")) {
+        window.location.href = json.url;
+      } else {
+        router.push(json.url);
+      }
     } catch {
       setError("Network error — please try again.");
       setSubmitting(false);

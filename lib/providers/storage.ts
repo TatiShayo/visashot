@@ -89,8 +89,12 @@ class LocalStorageProvider implements StorageProvider {
         if (e.isDirectory()) {
           await walk(abs, r);
         } else if (!e.name.endsWith(".meta")) {
-          const st = await fs.stat(abs);
-          if (nowMs - st.mtimeMs > RETENTION_MS) out.push(r.replace(/\\/g, "/"));
+          try {
+            const st = await fs.stat(abs);
+            if (nowMs - st.mtimeMs > RETENTION_MS) out.push(r.replace(/\\/g, "/"));
+          } catch {
+            // File might have been concurrently deleted or pruned
+          }
         }
       }
     }

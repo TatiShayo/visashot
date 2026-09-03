@@ -89,7 +89,18 @@ export async function ingestUpload(input: Buffer): Promise<IngestedImage> {
     failOn: "error",
     limitInputPixels: MAX_INPUT_PIXELS,
   }).rotate();
-  const meta = await pipeline.metadata();
+
+  let meta;
+  try {
+    meta = await pipeline.metadata();
+  } catch (e) {
+    throw new IngestError(
+      e instanceof Error && e.message.toLowerCase().includes("pixel")
+        ? "Image resolution is too high"
+        : "Could not read the uploaded image"
+    );
+  }
+
   if (!meta.width || !meta.height) {
     throw new IngestError("Could not read image dimensions");
   }

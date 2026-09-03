@@ -34,6 +34,14 @@ const CONTENT_TYPE: Record<DeliverableKind, string> = {
   instructions: "text/plain",
 };
 
+const EXTENSION_FOR: Record<DeliverableKind, string> = {
+  photo: ".png",
+  hires: ".png",
+  "sheet-4x6": ".pdf",
+  "sheet-a4": ".pdf",
+  instructions: ".txt",
+};
+
 export async function GET(
   req: NextRequest,
   ctx: { params: Promise<{ orderId: string }> }
@@ -94,11 +102,12 @@ export async function GET(
   }
   if (!bytes) return NextResponse.json({ error: "File not ready" }, { status: 404 });
 
+  const ext = EXTENSION_FOR[kind] ?? "";
   return new NextResponse(new Uint8Array(bytes), {
     status: 200,
     headers: {
       "Content-Type": CONTENT_TYPE[kind],
-      "Content-Disposition": `attachment; filename="visashot-${spec.id}-${kind}"`,
+      "Content-Disposition": `attachment; filename="visashot-${spec.id}-${kind}${ext}"`,
       "Cache-Control": "private, no-store",
     },
   });

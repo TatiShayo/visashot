@@ -1384,8 +1384,44 @@ export function getSpecOrThrow(id: string): PhotoSpec {
   return spec;
 }
 
+export function isValidSpecId(id: string): boolean {
+  return specById.has(id);
+}
+
 export function listSpecs(): PhotoSpec[] {
   return PHOTO_SPECS;
+}
+
+export function getSpecsByCountryCode(countryCode: string): PhotoSpec[] {
+  const code = countryCode.trim().toUpperCase();
+  return PHOTO_SPECS.filter((s) => s.countryCode.toUpperCase() === code);
+}
+
+export function getSpecsByDocType(docType: DocType): PhotoSpec[] {
+  return PHOTO_SPECS.filter((s) => s.docType === docType);
+}
+
+export function searchSpecs(query: string): PhotoSpec[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return PHOTO_SPECS;
+  return PHOTO_SPECS.filter(
+    (s) =>
+      s.displayName.toLowerCase().includes(q) ||
+      s.country.toLowerCase().includes(q) ||
+      s.countryCode.toLowerCase().includes(q) ||
+      s.docType.toLowerCase().includes(q) ||
+      s.id.toLowerCase().includes(q)
+  );
+}
+
+export function calculatePixelDimensions(
+  widthMm: number,
+  heightMm: number,
+  dpi: number
+): { widthPx: number; heightPx: number } {
+  const widthPx = Math.round((widthMm / 25.4) * dpi);
+  const heightPx = Math.round((heightMm / 25.4) * dpi);
+  return { widthPx, heightPx };
 }
 
 export function relatedSpecs(spec: PhotoSpec): PhotoSpec[] {

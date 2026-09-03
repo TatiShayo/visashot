@@ -124,4 +124,52 @@ describe("runComplianceChecks", () => {
     expect(c.tip).toMatch(/too small/i);
     expect(r.purchasable).toBe(false);
   });
+
+  it("head too large → FAIL with reshoot tip", () => {
+    const r = runComplianceChecks({ ...goodInput(), headHeightPct: 85 }, US);
+    const c = findCheck(r, "head-height");
+    expect(c.status).toBe("fail");
+    expect(c.tip).toMatch(/too large/i);
+    expect(r.purchasable).toBe(false);
+  });
+
+  it("zero faces detected → FAIL, blocks purchase", () => {
+    const r = runComplianceChecks({ ...goodInput(), faceCount: 0 }, US);
+    expect(findCheck(r, "single-face").status).toBe("fail");
+    expect(r.purchasable).toBe(false);
+  });
+
+  it("over-exposed photo (brightness > 235) → brightness WARN", () => {
+    const r = runComplianceChecks({ ...goodInput(), faceBrightness: 245 }, US);
+    expect(findCheck(r, "brightness").status).toBe("warn");
+    expect(findCheck(r, "brightness").tip).toMatch(/over-exposed/i);
+  });
+
+  it("flat / washed-out photo (contrast < 12) → contrast WARN", () => {
+    const r = runComplianceChecks({ ...goodInput(), faceContrast: 8 }, US);
+    expect(findCheck(r, "contrast").status).toBe("warn");
+  });
+
+  it("smiling in infant mode → WARN (not fail) for strict smile specs", () => {
+    // Strict baby spec (e.g. Schengen which forbids smiling for adults)
+    const strictBabySpec = { ...SCHENGEN, infant: true };
+    const res = runComplianceChecks({ ...goodInput(strictBabySpec), smileScore: 0.8 }, strictBabySpec);
+    expect(findCheck(res, "neutral-expression").status).toBe("warn");
+    expect(res.purchasable).toBe(true);
+  });
+
+  it("handles non-finite numbers safely in compliance check without throwing", () => {
+    const r = runComplianceChecks(
+      {
+        ...goodInput(),
+        headHeightPct: NaN,
+        eyeLinePct: Infinity,
+        faceTiltDeg: -Infinity,
+      },
+      US
+    );
+    expect(findCheck(r, "head-height").status).toBe("fail");
+    expect(findCheck(r, "eye-line").status).toBe("warn");
+    expect(r.purchasable).toBe(false);
+  });
 });

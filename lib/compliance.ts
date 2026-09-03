@@ -11,6 +11,7 @@
  */
 
 import type { PhotoSpec } from "@/data/photo-specs";
+import { hexToRgb } from "@/lib/pipeline";
 
 export type CheckStatus = "pass" | "warn" | "fail";
 
@@ -55,11 +56,6 @@ const TILT_WARN_DEG = 5;
 /** Perceived luminance of an RGB color, 0..255. */
 export function luminance(rgb: { r: number; g: number; b: number }): number {
   return 0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b;
-}
-
-function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const n = parseInt(hex.replace(/^#/, ""), 16);
-  return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff };
 }
 
 /** Euclidean distance between two RGB colors (0..~441). */
@@ -111,6 +107,7 @@ export function runComplianceChecks(
   // 2. Head height.
   {
     const inRange =
+      Number.isFinite(input.headHeightPct) &&
       input.headHeightPct >= spec.headHeightPctMin - 1 &&
       input.headHeightPct <= spec.headHeightPctMax + 1;
     checks.push({
@@ -119,7 +116,7 @@ export function runComplianceChecks(
       status: inRange ? "pass" : "fail",
       tip: inRange
         ? undefined
-        : input.headHeightPct < spec.headHeightPctMin
+        : (!Number.isFinite(input.headHeightPct) || input.headHeightPct < spec.headHeightPctMin)
           ? "Head is too small — move closer or retake so your head fills more of the frame."
           : "Head is too large — step back slightly and retake.",
     });
@@ -128,6 +125,7 @@ export function runComplianceChecks(
   // 3. Eye line.
   {
     const inRange =
+      Number.isFinite(input.eyeLinePct) &&
       input.eyeLinePct >= spec.eyeLinePctMin - 1 &&
       input.eyeLinePct <= spec.eyeLinePctMax + 1;
     checks.push({

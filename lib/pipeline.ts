@@ -39,9 +39,16 @@ export interface ProcessOutput {
   provider: "replicate" | "mock";
 }
 
-/** Parse "#RRGGBB" → sharp RGBA. */
+/** Parse "#RGB" or "#RRGGBB" → sharp RGBA. */
 export function hexToRgb(hex: string): { r: number; g: number; b: number } {
-  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  const clean = hex.trim().replace(/^#/, "");
+  if (/^[0-9a-f]{3}$/i.test(clean)) {
+    const r = parseInt(clean[0] + clean[0], 16);
+    const g = parseInt(clean[1] + clean[1], 16);
+    const b = parseInt(clean[2] + clean[2], 16);
+    return { r, g, b };
+  }
+  const m = /^([0-9a-f]{6})$/i.exec(clean);
   if (!m) throw new Error(`Invalid hex color: ${hex}`);
   const n = parseInt(m[1], 16);
   return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff };
@@ -88,37 +95,52 @@ export async function processPhoto(input: ProcessInput): Promise<ProcessOutput> 
   const crop = computeCropRect(landmarks, imageWidth, imageHeight, spec);
   const { left, top, width, height } = crop.rect;
 
-  const extractLeft = Math.max(0, left);
-  const extractTop = Math.max(0, top);
-  const extractRight = Math.min(imageWidth, left + width);
-  const extractBottom = Math.min(imageHeight, top + height);
-  const extractW = Math.max(1, extractRight - extractLeft);
-  const extractH = Math.max(1, extractBottom - extractTop);
+  const extractLeft = Math.max(0, Math.min(imageWidth, left));
+  const extractTop = Math.max(0, Math.min(imageHeight, top));
+  const extractRight = Math.max(0, Math.min(imageWidth, left + width));
+  const extractBottom = Math.max(0, Math.min(imageHeight, top + height));
+  const extractW = Math.max(0, extractRight - extractLeft);
+  const extractH = Math.max(0, extractBottom - extractTop);
 
-  const region = await sharp(composed)
-    .extract({
-      left: extractLeft,
-      top: extractTop,
-      width: extractW,
-      height: extractH,
+  let cropped: Buffer;
+  if (extractW > 0 && extractH > 0) {
+    const region = await sharp(composed)
+      .extract({
+        left: extractLeft,
+        top: extractTop,
+        width: extractW,
+        height: extractH,
+      })
+      .png()
+      .toBuffer();
+
+    // Pad back to the full crop rect on a spec-colored canvas.
+    const padLeft = extractLeft - left;
+    const padTop = extractTop - top;
+    cropped = await sharp({
+      create: {
+        width,
+        height,
+        channels: 4,
+        background: { ...rgb, alpha: 1 },
+      },
     })
-    .png()
-    .toBuffer();
-
-  // Pad back to the full crop rect on a spec-colored canvas.
-  const padLeft = extractLeft - left;
-  const padTop = extractTop - top;
-  const cropped = await sharp({
-    create: {
-      width,
-      height,
-      channels: 4,
-      background: { ...rgb, alpha: 1 },
-    },
-  })
-    .composite([{ input: region, left: padLeft, top: padTop }])
-    .png()
-    .toBuffer();
+      .composite([{ input: region, left: padLeft, top: padTop }])
+      .png()
+      .toBuffer();
+  } else {
+    // Zero overlap with source image — create a pure background canvas.
+    cropped = await sharp({
+      create: {
+        width,
+        height,
+        channels: 4,
+        background: { ...rgb, alpha: 1 },
+      },
+    })
+      .png()
+      .toBuffer();
+  }
 
   // 4. Resize to exact spec pixels.
   const finalBytes = await sharp(cropped)

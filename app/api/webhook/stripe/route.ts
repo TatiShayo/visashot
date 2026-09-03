@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
   if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 });
 
-  // Idempotent: only advance a pending order.
+  // Idempotent: only advance a pending order, or fulfill an already paid order if not yet delivered.
   if (order.status === "pending") {
     await store.update(order.id, { status: "paid", paidAtMs: Date.now() });
     try {
@@ -56,6 +56,13 @@ export async function POST(req: NextRequest) {
       // A paid customer not getting their files is the highest-value alert.
       // Capture, then return non-2xx so Stripe retries (fulfillOrder is
       // idempotent, so a retry is safe).
+      reportError(e, { stage: "fulfillment", orderId: order.id });
+      return NextResponse.json({ error: "Fulfillment failed" }, { status: 500 });
+    }
+  } else if (order.status === "paid" && !order.printSheetKey) {
+    try {
+      await fulfillOrder(order.id);
+    } catch (e) {
       reportError(e, { stage: "fulfillment", orderId: order.id });
       return NextResponse.json({ error: "Fulfillment failed" }, { status: 500 });
     }

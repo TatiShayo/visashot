@@ -207,6 +207,42 @@ describe("landmarksFromNormalized", () => {
     };
     const small = landmarksFromNormalized(base, 1000, 2000, 0.05);
     const big = landmarksFromNormalized(base, 1000, 2000, 0.2);
-    expect(big.crownY).toBeLessThan(small.crownY);
+    expect(small.crownY).toBeGreaterThan(big.crownY);
+  });
+
+  it("handles non-square specs correctly (Canada 50x70, China 33x48, Spain 26x32)", () => {
+    const canada = getSpecOrThrow("canada-passport");
+    const resCanada = computeCropRect(centered, 3000, 4000, canada);
+    expect(resCanada.rect.width / resCanada.rect.height).toBeCloseTo(canada.widthPx / canada.heightPx, 2);
+
+    const china = getSpecOrThrow("china-visa");
+    const resChina = computeCropRect(centered, 3000, 4000, china);
+    expect(resChina.rect.width / resChina.rect.height).toBeCloseTo(china.widthPx / china.heightPx, 2);
+
+    const spain = getSpecOrThrow("spain-passport");
+    const resSpain = computeCropRect(centered, 3000, 4000, spain);
+    expect(resSpain.rect.width / resSpain.rect.height).toBeCloseTo(spain.widthPx / spain.heightPx, 2);
+  });
+
+  it("handles head at minimum viable size (40px) without crashing", () => {
+    const lm: FaceLandmarks = {
+      crownY: 100,
+      chinY: 140, // 40px head
+      eyeY: 120,
+      faceCenterX: 300,
+    };
+    const res = computeCropRect(lm, 600, 600, US);
+    expect(res.rect.width).toBeGreaterThan(0);
+    expect(res.rect.height).toBeGreaterThan(0);
+  });
+
+  it("throws when head is smaller than minimum threshold (39px)", () => {
+    const lm: FaceLandmarks = {
+      crownY: 100,
+      chinY: 139, // 39px head
+      eyeY: 120,
+      faceCenterX: 300,
+    };
+    expect(() => computeCropRect(lm, 600, 600, US)).toThrow(CropError);
   });
 });

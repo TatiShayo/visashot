@@ -20,6 +20,8 @@ export interface RateLimitResult {
   resetAtMs: number;
 }
 
+const MAX_BUCKETS = 10000;
+
 /**
  * @param key    stable caller id (usually the client IP)
  * @param limit  max requests per window
@@ -27,6 +29,16 @@ export interface RateLimitResult {
  */
 export function rateLimit(key: string, limit: number, windowMs: number): RateLimitResult {
   const now = Date.now();
+
+  // Periodic pruning if the in-memory map grows large to prevent unbounded memory growth
+  if (buckets.size > MAX_BUCKETS) {
+    for (const [k, v] of buckets.entries()) {
+      if (now >= v.resetAtMs) {
+        buckets.delete(k);
+      }
+    }
+  }
+
   const b = buckets.get(key);
   if (!b || now >= b.resetAtMs) {
     const resetAtMs = now + windowMs;

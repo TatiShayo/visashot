@@ -24,9 +24,11 @@ export interface PriceBreakdown {
 }
 
 export function computePrice(intent: OrderIntent): PriceBreakdown {
-  const addonCount = Math.max(0, Math.floor(intent.addonSpecCount));
+  const rawAddon = intent && typeof intent === "object" ? intent.addonSpecCount : 0;
+  const addonCount = Number.isFinite(rawAddon) ? Math.max(0, Math.floor(rawAddon)) : 0;
+  const compliancePlus = Boolean(intent && intent.compliancePlus);
   const addonSpecCents = addonCount * ADDON_SPEC_CENTS;
-  const compliancePlusCents = intent.compliancePlus ? COMPLIANCE_PLUS_CENTS : 0;
+  const compliancePlusCents = compliancePlus ? COMPLIANCE_PLUS_CENTS : 0;
   const totalCents = BASE_PRICE_CENTS + addonSpecCents + compliancePlusCents;
 
   const lines = [{ label: "Photo set", cents: BASE_PRICE_CENTS }];
@@ -36,7 +38,7 @@ export function computePrice(intent: OrderIntent): PriceBreakdown {
       cents: addonSpecCents,
     });
   }
-  if (intent.compliancePlus) {
+  if (compliancePlus) {
     lines.push({ label: "Compliance+ (30-day reprocessing)", cents: compliancePlusCents });
   }
 

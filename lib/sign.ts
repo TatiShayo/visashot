@@ -6,7 +6,7 @@
  * re-checks the order's paid status server-side at download time.
  */
 
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { requireSigningSecret } from "./env";
 
 export type DeliverableKind = "photo" | "hires" | "sheet-4x6" | "sheet-a4" | "instructions";
@@ -28,8 +28,15 @@ export function signDownloadToken(
   kind: DeliverableKind,
   expiresAtMs: number
 ): string {
-  const payload = `${orderId}.${kind}.${expiresAtMs}`;
-  return `${expiresAtMs}.${hmac(payload)}`;
+  if (!orderId || typeof orderId !== "string" || !DELIVERABLE_KINDS.includes(kind)) {
+    throw new Error("Invalid orderId or deliverable kind");
+  }
+  const safeExpiry = Math.floor(Number(expiresAtMs));
+  if (!Number.isFinite(safeExpiry) || safeExpiry <= 0) {
+    throw new Error("Invalid expiration timestamp");
+  }
+  const payload = `${orderId}.${kind}.${safeExpiry}`;
+  return `${safeExpiry}.${hmac(payload)}`;
 }
 
 export function verifyDownloadToken(
@@ -37,16 +44,21 @@ export function verifyDownloadToken(
   kind: DeliverableKind,
   token: string
 ): { ok: true } | { ok: false; reason: "expired" | "invalid" } {
+  if (!orderId || typeof orderId !== "string" || !DELIVERABLE_KINDS.includes(kind)) {
+    return { ok: false, reason: "invalid" };
+  }
+  if (!token || typeof token !== "string") return { ok: false, reason: "invalid" };
   const dot = token.indexOf(".");
   if (dot <= 0) return { ok: false, reason: "invalid" };
   const expiresAtMs = Number(token.slice(0, dot));
   const sig = token.slice(dot + 1);
-  if (!Number.isFinite(expiresAtMs)) return { ok: false, reason: "invalid" };
+  if (!Number.isFinite(expiresAtMs) || expiresAtMs <= 0 || !sig) return { ok: false, reason: "invalid" };
 
   const expected = hmac(`${orderId}.${kind}.${expiresAtMs}`);
-  const a = Buffer.from(sig);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) {
+  // Constant-time length-independent comparison (hash both sides to 32 bytes before timingSafeEqual)
+  const a = createHash("sha256").update(sig).digest();
+  const b = createHash("sha256").update(expected).digest();
+  if (!timingSafeEqual(a, b)) {
     return { ok: false, reason: "invalid" };
   }
   if (Date.now() > expiresAtMs) return { ok: false, reason: "expired" };

@@ -51,10 +51,10 @@ export async function makePrintSheetPdf(
 
   // Cut guides: thin lines just outside the tiled block edges.
   const guideEls: React.ReactElement[] = [];
-  const minX = Math.min(...layout.cutXs);
-  const maxX = Math.max(...layout.cutXs);
-  const minY = Math.min(...layout.cutYs);
-  const maxY = Math.max(...layout.cutYs);
+  const minX = layout.cutXs.length > 0 ? Math.min(...layout.cutXs) : 0;
+  const maxX = layout.cutXs.length > 0 ? Math.max(...layout.cutXs) : layout.paper.widthMm;
+  const minY = layout.cutYs.length > 0 ? Math.min(...layout.cutYs) : 0;
+  const maxY = layout.cutYs.length > 0 ? Math.max(...layout.cutYs) : layout.paper.heightMm;
   for (const x of layout.cutXs) {
     guideEls.push(
       React.createElement(View, {

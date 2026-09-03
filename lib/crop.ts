@@ -62,13 +62,24 @@ export function computeCropRect(
   imageHeight: number,
   spec: PhotoSpec
 ): CropResult {
+  if (!landmarks || typeof landmarks !== "object") {
+    throw new CropError("Invalid landmarks: missing landmark object");
+  }
   const { crownY, chinY, eyeY, faceCenterX } = landmarks;
 
-  if (!Number.isFinite(crownY) || !Number.isFinite(chinY) || !Number.isFinite(eyeY)) {
+  if (
+    !Number.isFinite(crownY) ||
+    !Number.isFinite(chinY) ||
+    !Number.isFinite(eyeY) ||
+    !Number.isFinite(faceCenterX)
+  ) {
     throw new CropError("Invalid landmarks: non-finite coordinates");
   }
-  if (imageWidth <= 0 || imageHeight <= 0) {
+  if (!Number.isFinite(imageWidth) || !Number.isFinite(imageHeight) || imageWidth <= 0 || imageHeight <= 0) {
     throw new CropError("Invalid image dimensions");
+  }
+  if (!spec || !Number.isFinite(spec.widthPx) || !Number.isFinite(spec.heightPx) || spec.widthPx <= 0 || spec.heightPx <= 0) {
+    throw new CropError("Invalid photo specification dimensions");
   }
   const headPx = chinY - crownY;
   if (headPx <= 0) {
@@ -86,12 +97,21 @@ export function computeCropRect(
 
   const warnings: string[] = [];
 
-  const targetHeadPct = mid(spec.headHeightPctMin, spec.headHeightPctMax);
-  const targetEyePct = mid(spec.eyeLinePctMin, spec.eyeLinePctMax);
+  const minHeadPct = Number.isFinite(spec.headHeightPctMin) && spec.headHeightPctMin > 0 ? spec.headHeightPctMin : 50;
+  const maxHeadPct = Number.isFinite(spec.headHeightPctMax) && spec.headHeightPctMax > 0 ? spec.headHeightPctMax : 70;
+  const minEyePct = Number.isFinite(spec.eyeLinePctMin) && spec.eyeLinePctMin > 0 ? spec.eyeLinePctMin : 50;
+  const maxEyePct = Number.isFinite(spec.eyeLinePctMax) && spec.eyeLinePctMax > 0 ? spec.eyeLinePctMax : 70;
+
+  const targetHeadPct = mid(minHeadPct, maxHeadPct);
+  const targetEyePct = mid(minEyePct, maxEyePct);
 
   const cropHeight = headPx / (targetHeadPct / 100);
   const aspect = spec.widthPx / spec.heightPx;
   const cropWidth = cropHeight * aspect;
+
+  if (!Number.isFinite(cropWidth) || !Number.isFinite(cropHeight) || cropWidth <= 0 || cropHeight <= 0) {
+    throw new CropError("Failed to compute valid crop geometry");
+  }
 
   // Eye line measured from the bottom: distance from crop TOP to the eyes.
   const eyeFromTop = cropHeight * (1 - targetEyePct / 100);
@@ -154,11 +174,28 @@ export function landmarksFromNormalized(
   imageHeight: number,
   crownHairFactor = 0.12
 ): FaceLandmarks {
-  const chinY = points.chinY * imageHeight;
-  const foreheadY = points.foreheadTopY * imageHeight;
+  if (!points || typeof points !== "object") {
+    throw new CropError("Invalid normalized landmarks");
+  }
+  const { foreheadTopY, chinY: pChinY, leftEyeY, rightEyeY, leftEyeX, rightEyeX } = points;
+  if (
+    !Number.isFinite(foreheadTopY) ||
+    !Number.isFinite(pChinY) ||
+    !Number.isFinite(leftEyeY) ||
+    !Number.isFinite(rightEyeY) ||
+    !Number.isFinite(leftEyeX) ||
+    !Number.isFinite(rightEyeX) ||
+    !Number.isFinite(imageWidth) ||
+    !Number.isFinite(imageHeight)
+  ) {
+    throw new CropError("Invalid landmarks: non-finite coordinates");
+  }
+  const chinY = pChinY * imageHeight;
+  const foreheadY = foreheadTopY * imageHeight;
   const faceSpan = chinY - foreheadY;
-  const crownY = foreheadY - faceSpan * crownHairFactor;
-  const eyeY = ((points.leftEyeY + points.rightEyeY) / 2) * imageHeight;
-  const faceCenterX = ((points.leftEyeX + points.rightEyeX) / 2) * imageWidth;
+  const safeHairFactor = Number.isFinite(crownHairFactor) ? crownHairFactor : 0.12;
+  const crownY = foreheadY - faceSpan * safeHairFactor;
+  const eyeY = ((leftEyeY + rightEyeY) / 2) * imageHeight;
+  const faceCenterX = ((leftEyeX + rightEyeX) / 2) * imageWidth;
   return { crownY, chinY, eyeY, faceCenterX };
 }
