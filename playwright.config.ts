@@ -63,6 +63,12 @@ export default defineConfig({
     env: {
       NEXT_PUBLIC_E2E_FAKE_FACE: "true",
       NEXT_PUBLIC_APP_URL: BASE_URL,
+      // The e2e happy path (upload -> mock-pay -> downloads) intentionally
+      // exercises the mock payment provider inside this PRODUCTION build.
+      // The mock-payment kill guards refuse to activate under
+      // NODE_ENV=production, so the suite opts in explicitly. Never set on a
+      // real deployment.
+      E2E_ALLOW_MOCK_PAYMENTS: "1",
       // Explicitly unset so every provider stays on its typed mock.
       STRIPE_SECRET_KEY: "",
       REPLICATE_API_TOKEN: "",

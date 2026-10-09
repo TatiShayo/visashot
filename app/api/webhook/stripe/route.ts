@@ -19,8 +19,12 @@ export async function POST(req: NextRequest) {
 
   // The MOCK provider performs no signature verification (it trusts the JSON
   // body) — on a real production deployment that would let anyone mark any
-  // order paid. Same kill guard as /api/mock-pay. (REVIEW_FINDINGS H1)
-  if (provider.mocked && env.isRealProdDeployment) {
+  // order paid and download for free. Same kill guard as /api/mock-pay: gate
+  // on NODE_ENV === "production" (any production host, not just Vercel — a
+  // self-hosted prod build was previously free game), with an explicit
+  // E2E_ALLOW_MOCK_PAYMENTS opt-in for the Playwright suite's production
+  // build.
+  if (provider.mocked && env.isProd && !process.env.E2E_ALLOW_MOCK_PAYMENTS) {
     return NextResponse.json({ error: "Webhook not configured" }, { status: 403 });
   }
 

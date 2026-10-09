@@ -14,7 +14,12 @@ import { reportError } from "@/lib/monitoring";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  if (env.stripeSecretKey || env.isRealProdDeployment) {
+  // Fail closed in ANY production host (NODE_ENV === "production"), not just
+  // Vercel: a self-hosted prod build used to keep mock payments live — anyone
+  // could POST an orderId and get free fulfillment. The Playwright e2e suite
+  // intentionally runs a production build with the mock provider, so it opts
+  // in explicitly via E2E_ALLOW_MOCK_PAYMENTS (never set on a real deploy).
+  if (env.stripeSecretKey || (env.isProd && !process.env.E2E_ALLOW_MOCK_PAYMENTS)) {
     return NextResponse.json({ error: "Mock payments are disabled" }, { status: 403 });
   }
   const { orderId } = (await req.json().catch(() => ({}))) as { orderId?: string };
