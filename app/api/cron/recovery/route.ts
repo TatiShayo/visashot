@@ -19,7 +19,10 @@ export const runtime = "nodejs";
 const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
 
 function authorized(req: NextRequest): boolean {
-  if (!env.cronSecret) return !env.isProd;
+  // Fail closed: with no configured CRON_SECRET this route does not run — in
+  // ANY environment. The previous fallback (`return !env.isProd`) left the
+  // route unauthenticated on every non-production host.
+  if (!env.cronSecret) return false;
   const auth = req.headers.get("authorization") ?? "";
   return auth.startsWith("Bearer ") && tokensMatch(auth.slice(7), env.cronSecret);
 }
