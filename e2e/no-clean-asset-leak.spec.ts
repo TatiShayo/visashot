@@ -17,7 +17,6 @@ test("no un-watermarked image is reachable before payment", async ({ page, reque
   const processResponse = await uploadAndProcess(page);
   const body = await processResponse.json();
 
-  // 1. The /api/process response contains ONLY the watermarked preview
   //    (base64 data URI) + the report — no field ever names or links to the
   //    clean/processed storage object.
   expect(typeof body.preview).toBe("string");
@@ -39,17 +38,14 @@ test("no un-watermarked image is reachable before payment", async ({ page, reque
   const orderId: string = body.orderId;
   expect(orderId).toBeTruthy();
 
-  // 2. No network request made by the page during upload+processing ever hit
   //    a raw/clean asset path (defense in depth — no such route exists, but
   //    this guards against ever accidentally adding one).
   const leaked = networkResponses.filter((url) => /processed-[^/]+\.png/.test(url));
   expect(leaked, `leaked clean-asset URLs: ${leaked.join(", ")}`).toHaveLength(0);
 
-  // 3. Gate 1 (signature): a garbage token is rejected outright.
   const badSig = await request.get(`/api/download/${orderId}?kind=photo&token=0.not-a-real-signature`);
   expect(badSig.status()).toBe(403);
 
-  // 4. Gate 2 (payment re-check): even a VALID signature — computed the same
   //    way lib/sign.ts does, using the documented dev fallback secret that's
   //    active whenever DOWNLOAD_SIGNING_SECRET isn't set — is refused with
   //    402 while the order is still `pending` (unpaid). This is the gate that

@@ -47,7 +47,6 @@ async function cleanBytesForSpec(order: Order, spec: PhotoSpec): Promise<Buffer 
   const existing = await storage.get(key);
   if (existing) return existing;
 
-  // Add-on spec: re-crop the original. Needs the persisted landmarks + original.
   if (!order.originalKey || !order.landmarks) return null;
   const original = await storage.get(order.originalKey);
   if (!original) return null;
@@ -95,7 +94,6 @@ export async function fulfillOrder(orderId: string): Promise<Order | null> {
   const specs = specIds.map((id) => getSpecOrThrow(id));
 
   // Generate every spec's deliverables (primary reuses its process-time asset;
-  // add-ons are re-cropped from the original inside cleanBytesForSpec).
   for (const spec of specs) {
     const clean = await cleanBytesForSpec(order, spec);
     if (!clean) continue; // add-on missing original/landmarks — skip, primary still ships

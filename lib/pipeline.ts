@@ -57,7 +57,6 @@ export function hexToRgb(hex: string): { r: number; g: number; b: number } {
 export async function processPhoto(input: ProcessInput): Promise<ProcessOutput> {
   const { imageBytes, imageWidth, imageHeight, landmarks, spec } = input;
 
-  // 1. Background removal.
   const bg = await getBgRemovalProvider().removeBackground({
     image: imageBytes,
     contentType: "image/png",
@@ -65,7 +64,6 @@ export async function processPhoto(input: ProcessInput): Promise<ProcessOutput> 
 
   const rgb = hexToRgb(spec.bgColor);
 
-  // 2. Compose onto the spec background.
   //    - Real (alpha) result: composite over a solid canvas of spec bg color.
   //    - Mock (no alpha): flatten just guarantees an opaque base; the subject's
   //      real background remains (flagged to the user via backgroundMocked).
@@ -90,7 +88,6 @@ export async function processPhoto(input: ProcessInput): Promise<ProcessOutput> 
       .toBuffer();
   }
 
-  // 3. Crop to spec geometry. The crop rect may extend past the source; extract
   //    within bounds and pad the remainder with the spec background color.
   const crop = computeCropRect(landmarks, imageWidth, imageHeight, spec);
   const { left, top, width, height } = crop.rect;
@@ -142,7 +139,6 @@ export async function processPhoto(input: ProcessInput): Promise<ProcessOutput> 
       .toBuffer();
   }
 
-  // 4. Resize to exact spec pixels.
   const finalBytes = await sharp(cropped)
     .resize(spec.widthPx, spec.heightPx, { fit: "fill" })
     .withMetadata({ density: spec.dpi })

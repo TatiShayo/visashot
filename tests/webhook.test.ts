@@ -20,7 +20,6 @@ describe("Stripe Webhook Route (/api/webhook/stripe)", () => {
       amountCents: 499,
     });
 
-    // Create a dummy processed asset in storage so fulfillment can succeed
     const dummyPhoto = await sharp({
       create: { width: 600, height: 600, channels: 4, background: { r: 255, g: 255, b: 255, alpha: 1 } },
     })

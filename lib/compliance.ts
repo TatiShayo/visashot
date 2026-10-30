@@ -85,7 +85,6 @@ export function runComplianceChecks(
   const isBaby = Boolean(spec.infant);
   const checks: CheckItem[] = [];
 
-  // 1. Single face.
   if (input.faceCount === 0) {
     checks.push({
       id: "single-face",
@@ -104,7 +103,6 @@ export function runComplianceChecks(
     checks.push({ id: "single-face", label: "One face in the frame", status: "pass" });
   }
 
-  // 2. Head height.
   {
     const inRange =
       Number.isFinite(input.headHeightPct) &&
@@ -122,7 +120,6 @@ export function runComplianceChecks(
     });
   }
 
-  // 3. Eye line.
   {
     const inRange =
       Number.isFinite(input.eyeLinePct) &&
@@ -136,7 +133,6 @@ export function runComplianceChecks(
     });
   }
 
-  // 4. Face tilt / straightness.
   {
     const tilt = Math.abs(input.faceTiltDeg);
     checks.push({
@@ -147,7 +143,6 @@ export function runComplianceChecks(
     });
   }
 
-  // 5. Both eyes open (baby → WARN per exemption).
   {
     const closed =
       input.leftEyeClosed > EYE_CLOSED_THRESHOLD ||
@@ -165,7 +160,6 @@ export function runComplianceChecks(
     });
   }
 
-  // 6. Neutral expression (only when smiling is not allowed; baby → WARN).
   if (!spec.smileAllowed) {
     const smiling = input.smileScore > SMILE_THRESHOLD;
     const status: CheckStatus = smiling ? (isBaby ? "warn" : "fail") : "pass";
@@ -181,7 +175,6 @@ export function runComplianceChecks(
     });
   }
 
-  // 7. Glasses (heuristic → WARN when not allowed; exemption noted).
   if (!spec.glassesAllowed && input.glassesDetected) {
     checks.push({
       id: "glasses",
@@ -195,7 +188,6 @@ export function runComplianceChecks(
     checks.push({ id: "glasses", label: "No glasses", status: "pass" });
   }
 
-  // 8. Brightness.
   {
     const dark = input.faceBrightness < 60;
     const bright = input.faceBrightness > 235;
@@ -212,7 +204,6 @@ export function runComplianceChecks(
     });
   }
 
-  // 9. Contrast (flat/washed-out).
   {
     const flat = input.faceContrast < 12;
     checks.push({
@@ -223,7 +214,6 @@ export function runComplianceChecks(
     });
   }
 
-  // 10. Clothing vs background contrast (white-on-white is a top rejection).
   {
     const bg = hexToRgb(spec.bgColor);
     const dist = colorDistance(input.clothingRgb, bg);
@@ -238,7 +228,6 @@ export function runComplianceChecks(
     });
   }
 
-  // 11. Background replacement status (mock transparency).
   if (input.backgroundMocked) {
     checks.push({
       id: "background",

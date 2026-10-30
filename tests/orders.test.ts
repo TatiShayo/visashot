@@ -124,23 +124,18 @@ describe("Order Store & State Machine", () => {
     const fiveHoursAgo = now - 5 * 60 * 60 * 1000;
     const oneHourAgo = now - 1 * 60 * 60 * 1000;
 
-    // 1. Abandoned order (> 4h, has email, pending, recovery not sent) -> match
     const a1 = await store.create({ specId: "us-passport", email: "user1@example.com", amountCents: 499 });
     await store.update(a1.id, { createdAtMs: fiveHoursAgo });
 
-    // 2. Recent order (< 4h) -> should not match
     const a2 = await store.create({ specId: "us-passport", email: "user2@example.com", amountCents: 499 });
     await store.update(a2.id, { createdAtMs: oneHourAgo });
 
-    // 3. Old order but already paid -> should not match
     const a3 = await store.create({ specId: "us-passport", email: "user3@example.com", amountCents: 499 });
     await store.update(a3.id, { createdAtMs: fiveHoursAgo, status: "paid" });
 
-    // 4. Old order but recovery already sent -> should not match
     const a4 = await store.create({ specId: "us-passport", email: "user4@example.com", amountCents: 499 });
     await store.update(a4.id, { createdAtMs: fiveHoursAgo, recoveryEmailSent: true });
 
-    // 5. Old order with no email -> should not match
     const a5 = await store.create({ specId: "us-passport", email: null, amountCents: 499 });
     await store.update(a5.id, { createdAtMs: fiveHoursAgo });
 

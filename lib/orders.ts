@@ -238,7 +238,6 @@ class SupabaseOrderStore implements OrderStore {
     return (data ?? []).map((r) => this.fromRow(r));
   }
   async listForExpiryReminders(stage: "6mo" | "1mo", nowMs: number): Promise<Order[]> {
-    // Fetch delivered orders with an expiry set and the stage unsent, then
     // apply the exact window check in-process (keeps the date arithmetic in
     // one place, shared with the mock store, rather than duplicating it in SQL).
     const sentCol = stage === "6mo" ? "expiry_reminder_6mo_sent" : "expiry_reminder_1mo_sent";
